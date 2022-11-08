@@ -1,19 +1,17 @@
-FROM node:16
-
-# Create app directory
+FROM node:16-alpine AS ui-build
 WORKDIR /usr/src/app
+COPY frontend/ ./frontend/
+RUN cd frontend && npm ci && npm run build
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-COPY package*.json ./
+FROM node:16 AS server-build
+WORKDIR /root/
+COPY --from=ui-build /usr/src/app/frontend ./frontend
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
+COPY backend/server.js ./backend/
 
-RUN npm install
-# If you are building your code for production
-# RUN npm ci --only=production
+EXPOSE 3000
+EXPOSE 5000
 
-# Bundle app source
-COPY . .
-
-EXPOSE 8080
-CMD [ "node", "server.js" ]
+# CMD ["npx", "serve", "build", "&", "node", "./backend/server.js"]
+CMD npm start --prefix ./frontend & node ./backend/server.js
